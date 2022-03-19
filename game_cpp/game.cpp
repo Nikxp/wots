@@ -5,6 +5,7 @@
 
 #include "../framework/scene.hpp"
 #include "../framework/game.hpp"
+#include <vector>
 
 
 //-------------------------------------------------------
@@ -17,6 +18,7 @@ namespace params
 	{
 		constexpr float LINEAR_SPEED = 0.5f;
 		constexpr float ANGULAR_SPEED = 0.5f;
+		constexpr int AIRCRAFT_SHIP_CAPACITY = 5;
 	}
 
 	namespace aircraft
@@ -75,6 +77,38 @@ Vector2 operator * ( float left, Vector2 const &right )
 	return Vector2( left * right.x, left * right.y );
 }
 
+//-------------------------------------------------------
+//	Aircraft definition
+//-------------------------------------------------------
+
+class Ship;
+#include <memory>
+
+enum AircraftStatus {
+	ReadyToFlight,
+	TakeOff,
+	FlyForward,
+	Fuelling,
+	Count
+};
+
+class Aircraft
+{
+public:
+	Aircraft(Ship& mothership);
+	void init();
+	void deinit();
+	void Takeoff();
+	void update(float dt);
+private:
+	scene::Mesh* mesh;
+	Ship& _mothership;
+
+	Vector2 position;
+	float angle;
+	AircraftStatus status;
+};
+
 
 //-------------------------------------------------------
 //	Simple ship logic
@@ -91,6 +125,8 @@ public:
 	void keyPressed( int key );
 	void keyReleased( int key );
 	void mouseClicked( Vector2 worldPosition, bool isLeftButton );
+	Vector2 getPosition();
+	float getAngle();
 
 private:
 	scene::Mesh *mesh;
@@ -98,8 +134,63 @@ private:
 	float angle;
 
 	bool input[ game::KEY_COUNT ];
+	std::vector<Aircraft> aircraftStorage;
 };
 
+Aircraft::Aircraft(Ship& mothership) :
+	mesh(nullptr),
+	_mothership(mothership),
+	status(AircraftStatus::ReadyToFlight)
+{
+}
+
+void Aircraft::init() {
+	position = Vector2(0.f, 0.f);
+	angle = 0.f;
+
+}
+
+void Aircraft::deinit()
+{
+	if (mesh != NULL) {
+		scene::destroyMesh(mesh);
+		mesh = nullptr;
+	}
+}
+
+void Aircraft::Takeoff()
+{
+	assert(!mesh);
+	mesh = scene::createAircraftMesh();
+	position = _mothership.getPosition();
+	angle = _mothership.getAngle();
+	scene::placeMesh(mesh, position.x, position.y, angle);
+	status = FlyForward;
+}
+
+
+void Aircraft::update(float dt) {
+	float linearSpeed = 0.f;
+	float angularSpeed = 0.f;
+	switch (status) {
+		case ReadyToFlight:
+			return;
+			break;
+		case TakeOff:
+
+			break;
+		case FlyForward:
+			linearSpeed = params::aircraft::LINEAR_SPEED;
+			
+			break;
+		case Fuelling:
+			return;
+			break;
+	}
+	angle = angle;
+	position = position + linearSpeed * dt * Vector2(std::cos(angle), std::sin(angle));
+	scene::placeMesh(mesh, position.x, position.y, angle);
+};
 
 Ship::Ship() :
 	mesh( nullptr )
@@ -115,6 +206,10 @@ void Ship::init()
 	angle = 0.f;
 	for ( bool &key : input )
 		key = false;
+	for (int index = 0; index < params::ship::AIRCRAFT_SHIP_CAPACITY; index++) {
+		aircraftStorage.push_back(Aircraft(*this));
+		aircraftStorage[index].init();
+	}
 }
 
 
@@ -122,6 +217,9 @@ void Ship::deinit()
 {
 	scene::destroyMesh( mesh );
 	mesh = nullptr;
+	for (auto& aircraft : aircraftStorage) {
+		aircraft.deinit();
+	}
 }
 
 
@@ -151,6 +249,9 @@ void Ship::update( float dt )
 	angle = angle + angularSpeed * dt;
 	position = position + linearSpeed * dt * Vector2( std::cos( angle ), std::sin( angle ) );
 	scene::placeMesh( mesh, position.x, position.y, angle );
+	for (auto& aircraft : aircraftStorage) {
+		aircraft.update(dt);
+	}
 }
 
 
@@ -177,9 +278,16 @@ void Ship::mouseClicked( Vector2 worldPosition, bool isLeftButton )
 	}
 	else
 	{
-		scene::Mesh *mesh = scene::createAircraftMesh();
-		scene::placeMesh( mesh, worldPosition.x, worldPosition.y, 0.f );
+		aircraftStorage[0].Takeoff();
 	}
+}
+
+Vector2 Ship::getPosition() {
+	return position;
+}
+
+float Ship::getAngle() {
+	return angle;
 }
 
 
