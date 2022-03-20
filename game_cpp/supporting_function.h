@@ -12,13 +12,15 @@ namespace params
 	{
 		constexpr float LINEAR_SPEED = 0.5f;
 		constexpr float ANGULAR_SPEED = 0.5f;
-		constexpr int AIRCRAFT_SHIP_CAPACITY = 5;
+		constexpr int AIRCRAFT_SHIP_CAPACITY = 5.f;
 	}
 
 	namespace aircraft
 	{
 		constexpr float LINEAR_SPEED = 2.f;
 		constexpr float ANGULAR_SPEED = 2.5f;
+		constexpr float LINEAR_ACCELERATION = 0.8f;
+		constexpr float TAKEOFF_RADIUS = 0.4f;
 	}
 }
 
@@ -35,6 +37,8 @@ public:
 	Vector2();
 	Vector2(float vx, float vy);
 	Vector2(Vector2 const &other);
+	//sqrt is not efficiency operation;
+	float lengthSquare();
 };
 
 Vector2 operator+ (Vector2 const& left, Vector2 const& right);

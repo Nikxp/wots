@@ -20,6 +20,10 @@ Vector2::Vector2(Vector2 const& other) :
 {
 }
 
+float Vector2::lengthSquare() {
+	return x * x + y * y;
+}
+
 
 Vector2 operator + (Vector2 const& left, Vector2 const& right)
 {

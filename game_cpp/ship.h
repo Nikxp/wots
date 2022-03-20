@@ -23,6 +23,7 @@ public:
 private:
 	scene::Mesh* mesh;
 	Vector2 position;
+	Vector2 target;
 	float angle;
 
 	bool input[game::KEY_COUNT];

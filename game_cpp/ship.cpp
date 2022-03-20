@@ -85,6 +85,7 @@ void Ship::mouseClicked(Vector2 worldPosition, bool isLeftButton)
 	if (isLeftButton)
 	{
 		scene::placeGoalMarker(worldPosition.x, worldPosition.y);
+		target = worldPosition;
 	}
 	else
 	{
