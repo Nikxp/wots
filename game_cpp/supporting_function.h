@@ -8,11 +8,15 @@
 
 namespace params
 {
+	namespace precision
+	{
+		constexpr float ZERO_COMPARISON = 1e-6;
+	}
 	namespace ship
 	{
 		constexpr float LINEAR_SPEED = 0.5f;
 		constexpr float ANGULAR_SPEED = 0.5f;
-		constexpr int AIRCRAFT_SHIP_CAPACITY = 5.f;
+		constexpr int AIRCRAFT_SHIP_CAPACITY = 5;
 	}
 
 	namespace aircraft
@@ -42,4 +46,5 @@ public:
 };
 
 Vector2 operator+ (Vector2 const& left, Vector2 const& right);
+Vector2 operator- (Vector2 const& left, Vector2 const& right);
 Vector2 operator* (float left, Vector2 const& right);

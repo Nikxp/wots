@@ -86,6 +86,9 @@ void Ship::mouseClicked(Vector2 worldPosition, bool isLeftButton)
 	{
 		scene::placeGoalMarker(worldPosition.x, worldPosition.y);
 		target = worldPosition;
+		for (auto& aircraft : aircraftStorage) {
+			aircraft.setTarget(target);
+		}
 	}
 	else
 	{

@@ -11,8 +11,16 @@ enum AircraftStatus {
 	TakeOff,
 	LayInACourse,
 	FlyForward,
+	Patroling,
 	Fuelling,
 	Count
+};
+
+enum TurnDecision {
+	OnPatrolCircle,
+	OnCourse,
+	ToCenter,
+	FromCenter
 };
 
 class Aircraft
@@ -23,20 +31,24 @@ public:
 	void deinit();
 	void Takeoff();
 	void update(float dt);
+	void setTarget(Vector2 target);
 private:
 
 	bool _isTakeOffFinished();
+	TurnDecision _getTurnDecision(float patrolRadius);
 	
-	scene::Mesh* mesh;
+	scene::Mesh* _mesh;
 	Ship& _mothership;
 	
-	Vector2 position;
-	Vector2 speed;
-	float angle;
+	Vector2 _position;
+	float _speed;
+	float _angle;
+
+	Vector2 _target;
 	
-	AircraftStatus status;
+	AircraftStatus _status;
 
 	//Distance from Ship center
-	float relativePosition;
+	float _relativePosition;
 
 };
