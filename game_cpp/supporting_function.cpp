@@ -39,3 +39,7 @@ Vector2 operator * (float left, Vector2 const& right)
 {
 	return Vector2(left * right.x, left * right.y);
 }
+
+bool isVectorsClockviseOrder(Vector2 const& first, Vector2 const& second) {
+	return (first.x * second.y - first.y * second.x) >= -params::precision::ZERO_COMPARISON;
+}

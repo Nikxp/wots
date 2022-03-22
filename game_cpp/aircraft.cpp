@@ -9,7 +9,8 @@
 Aircraft::Aircraft(Ship& mothership) :
 	_mesh(nullptr),
 	_mothership(mothership),
-	_status(AircraftStatus::ReadyToFlight)
+	_status(AircraftStatus::ReadyToFlight),
+	_flightTime(0.f)
 {
 }
 
@@ -27,26 +28,32 @@ void Aircraft::deinit()
 	}
 }
 
-void Aircraft::Takeoff()
+bool Aircraft::Takeoff()
 {
-	assert(!_mesh);
-	_mesh = scene::createAircraftMesh();
-	_position = _mothership.getPosition();
-	_relativePosition = 0.f;
-	_angle = _mothership.getAngle();
-	scene::placeMesh(_mesh, _position.x, _position.y, _angle);
-	_status = TakeOff;
+	if (_status == ReadyToFlight) {
+		assert(!_mesh);
+		_mesh = scene::createAircraftMesh();
+		_position = _mothership.getPosition();
+		_relativePosition = 0.f;
+		_angle = _mothership.getAngle();
+		scene::placeMesh(_mesh, _position.x, _position.y, _angle);
+		_status = TakeOff;
+		return true;
+	}
+	return false;
 }
 
 void Aircraft::update(float dt) {
-
-	float angularSpeed = 0.f;
-	TurnDecision turnDecision;
+	// Placeholder::
+	// Set speed more complex
+	// Refactor code
+	_flightTime += dt;
 	switch (_status) {
-	case ReadyToFlight:
+	case ReadyToFlight: {
 		return;
 		break;
-	case TakeOff:
+	}
+	case TakeOff: {
 		_speed = params::aircraft::LINEAR_SPEED * 0.25;
 		_angle = _mothership.getAngle();
 		_relativePosition = _relativePosition + _speed * dt;
@@ -56,47 +63,89 @@ void Aircraft::update(float dt) {
 			_status = LayInACourse;
 		}
 		break;
-	case LayInACourse:
-		scene::placeMesh(_mesh, _position.x, _position.y, _angle);
-		turnDecision = _getTurnDecision(0.7f);
+	}
+	case LayInACourse: {
+		TurnDecision turnDecision = _getTurnDecision(0.7f);
 		switch (turnDecision) {
-		case OnPatrolCircle:
-			_status = Patroling;
-			break;
-			std::cout << "On Patrol" << std::endl;
-		case OnCourse:
-			_status = FlyForward;
-			std::cout << "Forward" << std::endl;
-			break;
-		case ToCenter:
-			_speed = params::aircraft::LINEAR_SPEED * 0.5;
-			_angle = _angle + 2 * dt;
-			_position = _position + _speed * dt * Vector2(std::cos(_angle), std::sin(_angle));
-			std::cout << "To Center" << std::endl;
-			break;
-		case FromCenter:
-			_speed = params::aircraft::LINEAR_SPEED * 0.5;
-			_angle = _angle - 2 * dt;
-			_position = _position + _speed * dt * Vector2(std::cos(_angle), std::sin(_angle));
+			case OnPatrolCircle: {
+				_status = Patroling;
+				break;
+				//std::cout << "On Patrol" << std::endl;
+			}
+			case OnCourse: {
+				_status = FlyForward;
+				//std::cout << "Forward" << std::endl;
+				break;
+			}
+			case ToCenter: {
+				_speed = params::aircraft::LINEAR_SPEED * 0.5;
+				_angle = _angle + 2 * dt;
+				_position = _position + _speed * dt * Vector2(std::cos(_angle), std::sin(_angle));
+				//std::cout << "To Center" << std::endl;
+				break;
+			}
+			case FromCenter: {
+				_speed = params::aircraft::LINEAR_SPEED * 0.5;
+				_angle = _angle - 2 * dt;
+				_position = _position + _speed * dt * Vector2(std::cos(_angle), std::sin(_angle));
 
-			std::cout << "From center" << std::endl;
-			break;
+				//std::cout << "From center" << std::endl;
+				break;
+			}
+		}
+		scene::placeMesh(_mesh, _position.x, _position.y, _angle);
+		if (_isReturningTime()) {
+			_status = Returning;
 		}
 		break;
-	case FlyForward:
+	}
+	case FlyForward: {
 		_speed = params::aircraft::LINEAR_SPEED;
 		_angle = _angle;
 		_position = _position + _speed * dt * Vector2(std::cos(_angle), std::sin(_angle));
 		scene::placeMesh(_mesh, _position.x, _position.y, _angle);
+		if (_isReturningTime()) {
+			_status = Returning;
+		}
 		break;
-	case Fuelling:
+	}
+	case Returning: {
+		Vector2 vectorToMothership = _mothership.getPosition() - _position;
+		Vector2 angleVector(cos(_angle), sin(_angle));
+		_speed = params::aircraft::LINEAR_SPEED * 0.5;
+		if (isVectorsClockviseOrder(vectorToMothership, angleVector)) {
+			_angle = _angle - 2 * dt;
+		}
+		else {
+			_angle = _angle + 2 * dt;
+		}
+		_position = _position + _speed * dt * Vector2(std::cos(_angle), std::sin(_angle));
+		scene::placeMesh(_mesh, _position.x, _position.y, _angle);
+		if (_isAircraftNearTheMothership()) {
+			_status = Fuelling;
+			scene::destroyMesh(_mesh);
+			_mesh = nullptr;
+		}
+		break;
+	}
+	case Fuelling: {
+
+		_flightTime -= dt * (params::ship::FUELLING_COEFFICIENT + 1);
+		if (_flightTime < 0) {
+			_flightTime = 0;
+			_status = ReadyToFlight;
+		}
 		return;
 		break;
 	}
+	}
+	std::cout << _flightTime;
 }
 
 void Aircraft::setTarget(Vector2 target) {
-	_target = target;
+	if (_status != Returning) {
+		_target = target;
+	}
 }
 
 bool Aircraft::_isTakeOffFinished() {
@@ -143,4 +192,16 @@ TurnDecision Aircraft::_getTurnDecision(float patrolRadius) {
 			return TurnDecision::ToCenter;
 		}
 	}
+}
+
+bool Aircraft::_isReturningTime() {
+	//Placeholder
+	return _flightTime * 2 > params::aircraft::MAXIMAL_FLIGHT_TIME;
+}
+
+bool Aircraft::_isAircraftNearTheMothership() {
+	if ((_mothership.getPosition() - _position).lengthSquare() <= std::pow(params::ship::LANDING_RADIUS, 2)) {
+		return true;
+	}
+	return false;
 }

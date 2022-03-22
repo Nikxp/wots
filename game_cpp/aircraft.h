@@ -12,6 +12,7 @@ enum AircraftStatus {
 	LayInACourse,
 	FlyForward,
 	Patroling,
+	Returning,
 	Fuelling,
 	Count
 };
@@ -29,13 +30,16 @@ public:
 	Aircraft(Ship& mothership);
 	void init();
 	void deinit();
-	void Takeoff();
+	bool Takeoff();
 	void update(float dt);
 	void setTarget(Vector2 target);
 private:
 
 	bool _isTakeOffFinished();
 	TurnDecision _getTurnDecision(float patrolRadius);
+	bool _isReturningTime();
+	bool _isAircraftNearTheMothership();
+	void _setReturnModeIfNeed();
 	
 	scene::Mesh* _mesh;
 	Ship& _mothership;
@@ -43,6 +47,7 @@ private:
 	Vector2 _position;
 	float _speed;
 	float _angle;
+	float _flightTime;
 
 	Vector2 _target;
 	
