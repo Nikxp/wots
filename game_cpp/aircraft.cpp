@@ -50,6 +50,7 @@ void Aircraft::update(float dt) {
 	_flightTime += dt;
 	switch (_status) {
 	case ReadyToFlight: {
+		_flightTime = 0;
 		return;
 		break;
 	}
@@ -95,6 +96,7 @@ void Aircraft::update(float dt) {
 		}
 		scene::placeMesh(_mesh, _position.x, _position.y, _angle);
 		if (_isReturningTime()) {
+			std::cout << _flightTime;
 			_status = Returning;
 		}
 		break;
@@ -105,6 +107,7 @@ void Aircraft::update(float dt) {
 		_position = _position + _speed * dt * Vector2(std::cos(_angle), std::sin(_angle));
 		scene::placeMesh(_mesh, _position.x, _position.y, _angle);
 		if (_isReturningTime()) {
+			std::cout << _flightTime;
 			_status = Returning;
 		}
 		break;
@@ -139,7 +142,6 @@ void Aircraft::update(float dt) {
 		break;
 	}
 	}
-	std::cout << _flightTime;
 }
 
 void Aircraft::setTarget(Vector2 target) {

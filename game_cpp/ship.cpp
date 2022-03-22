@@ -92,7 +92,13 @@ void Ship::mouseClicked(Vector2 worldPosition, bool isLeftButton)
 	}
 	else
 	{
-		aircraftStorage[0].Takeoff();
+		bool isTakeoffSuccess;
+		for (auto& aircraft : aircraftStorage) {
+			isTakeoffSuccess = aircraft.Takeoff();
+			if (isTakeoffSuccess) {
+				break;
+			}
+		}
 	}
 }
 
