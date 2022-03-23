@@ -6,6 +6,10 @@
 Ship::Ship() :
 	mesh(nullptr)
 {
+	for (int index = 0; index < params::ship::AIRCRAFT_SHIP_CAPACITY; index++) {
+		aircraftStorage.push_back(Aircraft(*this));
+		aircraftStorage[index].init();
+	}
 }
 
 void Ship::init()
@@ -14,11 +18,11 @@ void Ship::init()
 	mesh = scene::createShipMesh();
 	position = Vector2(0.f, 0.f);
 	angle = 0.f;
-	for (bool& key : input)
+	for (bool& key : input) {
 		key = false;
-	for (int index = 0; index < params::ship::AIRCRAFT_SHIP_CAPACITY; index++) {
-		aircraftStorage.push_back(Aircraft(*this));
-		aircraftStorage[index].init();
+	}
+	for (auto& aircraft : aircraftStorage) {
+		aircraft.init();
 	}
 }
 

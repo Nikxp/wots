@@ -27,7 +27,7 @@ namespace params
 		constexpr float ANGULAR_SPEED = 2.5f;
 		constexpr float LINEAR_ACCELERATION = 0.8f;
 		constexpr float TAKEOFF_RADIUS = 0.4f;
-		constexpr float MAXIMAL_FLIGHT_TIME = 30.f;
+		constexpr float MAXIMAL_FLIGHT_TIME = 10.f;
 	}
 }
 

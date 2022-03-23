@@ -17,7 +17,6 @@ Aircraft::Aircraft(Ship& mothership) :
 void Aircraft::init() {
 	_position = Vector2(0.f, 0.f);
 	_angle = 0.f;
-
 }
 
 void Aircraft::deinit()
@@ -26,6 +25,7 @@ void Aircraft::deinit()
 		scene::destroyMesh(_mesh);
 		_mesh = nullptr;
 	}
+	_status = ReadyToFlight;
 }
 
 bool Aircraft::Takeoff()
@@ -71,32 +71,26 @@ void Aircraft::update(float dt) {
 			case OnPatrolCircle: {
 				_status = Patroling;
 				break;
-				//std::cout << "On Patrol" << std::endl;
 			}
 			case OnCourse: {
 				_status = FlyForward;
-				//std::cout << "Forward" << std::endl;
 				break;
 			}
 			case ToCenter: {
 				_speed = params::aircraft::LINEAR_SPEED * 0.5;
 				_angle = _angle + 2 * dt;
 				_position = _position + _speed * dt * Vector2(std::cos(_angle), std::sin(_angle));
-				//std::cout << "To Center" << std::endl;
 				break;
 			}
 			case FromCenter: {
 				_speed = params::aircraft::LINEAR_SPEED * 0.5;
 				_angle = _angle - 2 * dt;
 				_position = _position + _speed * dt * Vector2(std::cos(_angle), std::sin(_angle));
-
-				//std::cout << "From center" << std::endl;
 				break;
 			}
 		}
 		scene::placeMesh(_mesh, _position.x, _position.y, _angle);
 		if (_isReturningTime()) {
-			std::cout << _flightTime;
 			_status = Returning;
 		}
 		break;
@@ -107,7 +101,6 @@ void Aircraft::update(float dt) {
 		_position = _position + _speed * dt * Vector2(std::cos(_angle), std::sin(_angle));
 		scene::placeMesh(_mesh, _position.x, _position.y, _angle);
 		if (_isReturningTime()) {
-			std::cout << _flightTime;
 			_status = Returning;
 		}
 		break;
@@ -198,7 +191,12 @@ TurnDecision Aircraft::_getTurnDecision(float patrolRadius) {
 
 bool Aircraft::_isReturningTime() {
 	//Placeholder
-	return _flightTime * 2 > params::aircraft::MAXIMAL_FLIGHT_TIME;
+	// Check if time calculated correctly (acceleration)
+	assert(params::aircraft::LINEAR_SPEED > params::ship::LINEAR_SPEED);
+	float timeForReturning = 0.f;
+	timeForReturning += sqrt((_mothership.getPosition() - _position).lengthSquare()) / (params::aircraft::LINEAR_SPEED - params::ship::LINEAR_SPEED);
+	timeForReturning += 2 * 3.15 / params::aircraft::ANGULAR_SPEED;
+	return _flightTime + timeForReturning  > params::aircraft::MAXIMAL_FLIGHT_TIME;
 }
 
 bool Aircraft::_isAircraftNearTheMothership() {
