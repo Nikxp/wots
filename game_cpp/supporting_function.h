@@ -19,21 +19,23 @@ namespace params
 	{
 		constexpr float LINEAR_SPEED = 0.5f;
 		constexpr float ANGULAR_SPEED = 0.5f;
-		constexpr int AIRCRAFT_SHIP_CAPACITY = 5;
 		constexpr float LANDING_RADIUS = 0.2f;
 		constexpr float FUELLING_COEFFICIENT = 3.f;
+		constexpr int AIRCRAFT_SHIP_CAPACITY = 5;
 	}
 
 	namespace aircraft
 	{
 		constexpr float LINEAR_SPEED = 2.f;
-		constexpr float ANGULAR_SPEED = 2.5f;
 		constexpr float LINEAR_ACCELERATION = 0.7f;
-		constexpr float TAKEOFF_RADIUS = 0.4f;
+		constexpr float ANGULAR_SPEED = 2.5f;
 		constexpr float MAXIMAL_FLIGHT_TIME = 30.f;
+
+		constexpr float TAKEOFF_RADIUS = 0.4f;
+		constexpr float TAKEOFF_SPEED_COEFICIENT = 0.25f;
+
 		constexpr float PATROL_RADIUS = 0.7f;
 		constexpr float PATROL_SPEED_COEFFICIENT = 0.6f;
-		constexpr float TAKEOFF_SPEED_COEFICIENT = 0.25f;
 
 		// Relativly to ship LINEAR_SPEED;
 		constexpr float LANDING_SPEED_COEFFICIENT = 1.5f;
