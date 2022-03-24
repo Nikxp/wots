@@ -43,3 +43,10 @@ Vector2 operator * (float left, Vector2 const& right)
 bool isVectorsClockviseOrder(Vector2 const& first, Vector2 const& second) {
 	return (first.x * second.y - first.y * second.x) >= -params::precision::ZERO_COMPARISON;
 }
+
+int sign(float number) {
+	if (number > 0) {
+		return 1;
+	}
+	return -1;
+}

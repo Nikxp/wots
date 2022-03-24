@@ -40,6 +40,12 @@ private:
 	bool _isReturningTime();
 	bool _isAircraftNearTheMothership();
 	void _setReturnModeIfNeed();
+	float _deltaSpeed(float acceleration, float dt, float targetSpeed);
+	bool _isOnCourse();
+	float _getRelativePatrolAngle(float patrolRadius, bool* status);
+	bool _isBrakeTime(float targetSpeed, float acceleration);
+	float _getAcceleration(float targetSpeed, float dt);
+
 	
 	scene::Mesh* _mesh;
 	Ship& _mothership;

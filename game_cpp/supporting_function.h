@@ -11,6 +11,9 @@ namespace params
 	namespace precision
 	{
 		constexpr float ZERO_COMPARISON = 1e-6;
+		constexpr float PI_CONST = 3.141593f;
+		constexpr float PATROL_RADIUS_VARIATION = 1e-4;
+		constexpr float ON_COURSE_ANGLE_VARIATION = 1e-4;
 	}
 	namespace ship
 	{
@@ -25,9 +28,11 @@ namespace params
 	{
 		constexpr float LINEAR_SPEED = 2.f;
 		constexpr float ANGULAR_SPEED = 2.5f;
-		constexpr float LINEAR_ACCELERATION = 0.8f;
+		constexpr float LINEAR_ACCELERATION = 0.7f;
 		constexpr float TAKEOFF_RADIUS = 0.4f;
-		constexpr float MAXIMAL_FLIGHT_TIME = 10.f;
+		constexpr float MAXIMAL_FLIGHT_TIME = 7.f;
+		constexpr float PATROL_RADIUS = 0.7f;
+		constexpr float PATROL_SPEED_COEFFICIENT = 0.6f;
 	}
 }
 
@@ -52,3 +57,4 @@ Vector2 operator+ (Vector2 const& left, Vector2 const& right);
 Vector2 operator- (Vector2 const& left, Vector2 const& right);
 Vector2 operator* (float left, Vector2 const& right);
 bool isVectorsClockviseOrder(Vector2 const& first, Vector2 const& second);
+int sign(float number);
