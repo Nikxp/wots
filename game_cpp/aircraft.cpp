@@ -2,6 +2,7 @@
 #include "ship.h"
 #include <cassert>
 #include <cmath>
+#include <algorithm>
 
 Aircraft::Aircraft(Ship& mothership) :
 	_mesh(nullptr),
@@ -32,7 +33,7 @@ bool Aircraft::Takeoff()
 		assert(!_mesh);
 		_mesh = scene::createAircraftMesh();
 		_position = _mothership.getPosition();
-		_relativePosition = 0.f;
+		_distanceToShip = 0.f;
 		_angle = _mothership.getAngle();
 		scene::placeMesh(_mesh, _position.x, _position.y, _angle);
 		_status = TakeOff;
@@ -43,7 +44,9 @@ bool Aircraft::Takeoff()
 
 void Aircraft::update(float dt) {
 	_flightTime += dt;
-	float patrolRadius = 0.7f;
+	float acceleration = 0.f;
+	float deltaAngle = 0.f;
+
 	switch (_status) {
 	case ReadyToFlight: {
 		_flightTime = 0;
@@ -51,13 +54,20 @@ void Aircraft::update(float dt) {
 		break;
 	}
 	case TakeOff: {
-		float acceleration = params::aircraft::LINEAR_ACCELERATION;
-		float deltaSpeed = _deltaSpeed(params::aircraft::LINEAR_ACCELERATION, dt, 0.25 * params::aircraft::LINEAR_SPEED);
+		acceleration = params::aircraft::LINEAR_ACCELERATION;
+		float deltaSpeed = _getDeltaSpeed(params::aircraft::LINEAR_ACCELERATION, dt, params::aircraft::TAKEOFF_SPEED_COEFICIENT * params::aircraft::LINEAR_SPEED);
+		
 		_angle = _mothership.getAngle();
-		_relativePosition = _relativePosition + _speed * dt + deltaSpeed * dt * 0.5;
-		_position = _mothership.getPosition() + _relativePosition * Vector2(std::cos(_angle), std::sin(_angle));
+		_distanceToShip = _distanceToShip + _speed * dt + deltaSpeed * dt * 0.5f;
+		_position = _mothership.getPosition() + _distanceToShip * Vector2(std::cos(_angle), std::sin(_angle));
 		_speed += deltaSpeed;
+
 		scene::placeMesh(_mesh, _position.x, _position.y, _angle);
+
+		if (_isReturningTime()) {
+			_status = Returning;
+			break;
+		}
 		if (_isTakeOffFinished()) {
 			_status = LayInACourse;
 		}
@@ -65,28 +75,14 @@ void Aircraft::update(float dt) {
 	}
 	case LayInACourse: {
 		bool isSuccess; 
-		float acceleration = 0.f;
+
 		if (_isOnCourse()) {
 			float patrolSpeed = params::aircraft::LINEAR_SPEED * params::aircraft::PATROL_SPEED_COEFFICIENT;
-			if (_isBrakeTime(patrolSpeed, params::aircraft::LINEAR_ACCELERATION, _target)) {
-				acceleration = _getAcceleration(patrolSpeed,dt);
-			}
-			else {
-				acceleration = _getAcceleration(params::aircraft::LINEAR_SPEED, dt);
-			}
+			acceleration = _getAcceleration(_target, patrolSpeed, dt);
 		}
 
-		float relativePatrolAngle = _getRelativePatrolAngle(params::aircraft::PATROL_RADIUS, &isSuccess);
-		if (abs(relativePatrolAngle) <= params::aircraft::ANGULAR_SPEED * dt) {
-			_angle += relativePatrolAngle;
-		}
-		else {
-			_angle += sign(relativePatrolAngle) * (params::aircraft::ANGULAR_SPEED * dt);
-		}
-		_angle = fmod(_angle, 2 * params::precision::PI_CONST);
+		changeInternalState(acceleration, _getLayInACourseDeltaAngle(dt), dt);
 
-		_position = _position + (_speed * dt + acceleration*pow(dt,2)) * Vector2(std::cos(_angle), std::sin(_angle));
-		_speed = _speed + acceleration * dt;
 		scene::placeMesh(_mesh, _position.x, _position.y, _angle);
 
 		if (_isReturningTime()) {
@@ -98,28 +94,22 @@ void Aircraft::update(float dt) {
 	case Returning: {
 		Vector2 vectorToMothership = _mothership.getPosition() - _position;
 		Vector2 angleVector(cos(_angle), sin(_angle));
-		float acceleration = 0;
+
+		float returnSpeed = std::min(params::ship::LINEAR_SPEED * params::aircraft::LANDING_SPEED_COEFFICIENT, params::aircraft::LINEAR_SPEED* 1.f);
+		acceleration = _getAcceleration(_mothership.getPosition(), returnSpeed, dt);
 		
-		float returnSpeed = params::ship::LINEAR_SPEED * params::aircraft::LANDING_SPEED_COEFFICIENT;
-		if (returnSpeed > params::aircraft::LINEAR_SPEED) {
-			returnSpeed = params::aircraft::LINEAR_SPEED;
-		}
-		if (_isBrakeTime(returnSpeed, params::aircraft::LINEAR_ACCELERATION, _mothership.getPosition())) {
-			acceleration = _getAcceleration(returnSpeed, dt);
+		float relativePatrolAngle = _getVectorsAngleDistance(atan2(vectorToMothership.y, vectorToMothership.x), _angle);
+		if (abs(relativePatrolAngle) <= params::aircraft::ANGULAR_SPEED * dt) {
+			deltaAngle = relativePatrolAngle;
 		}
 		else {
-			acceleration = _getAcceleration(params::aircraft::LINEAR_SPEED, dt);
+			deltaAngle = sign(relativePatrolAngle) * (params::aircraft::ANGULAR_SPEED * dt);
 		}
 
-		if (isVectorsClockviseOrder(vectorToMothership, angleVector)) {
-			_angle = _angle - 2 * dt;
-		}
-		else {
-			_angle = _angle + 2 * dt;
-		}
-		_position = _position + (_speed * dt + acceleration*pow(dt,2)* 0.5) * Vector2(std::cos(_angle), std::sin(_angle));
-		_speed += acceleration * dt;
+		changeInternalState(acceleration, deltaAngle, dt);
+
 		scene::placeMesh(_mesh, _position.x, _position.y, _angle);
+		
 		if (_isAircraftNearTheMothership()) {
 			_status = Fuelling;
 			scene::destroyMesh(_mesh);
@@ -128,7 +118,6 @@ void Aircraft::update(float dt) {
 		break;
 	}
 	case Fuelling: {
-
 		_flightTime -= dt * (params::ship::FUELLING_COEFFICIENT + 1);
 		if (_flightTime < 0) {
 			_flightTime = 0;
@@ -149,8 +138,14 @@ void Aircraft::setTarget(Vector2 target) {
 	}
 }
 
+void Aircraft::changeInternalState(float acceleration, float deltaAngle, float dt) {
+	_angle = fmod(_angle + deltaAngle, 2 * params::precision::PI_CONST);
+	_position = _position + (_speed * dt + acceleration * pow(dt, 2) * 0.5f) * Vector2(std::cos(_angle), std::sin(_angle));
+	_speed = _speed + acceleration * dt;
+}
+
 bool Aircraft::_isTakeOffFinished() {
-	return params::aircraft::TAKEOFF_RADIUS < _relativePosition;
+	return params::aircraft::TAKEOFF_RADIUS < _distanceToShip;
 }
 
 bool Aircraft::_isReturningTime() {
@@ -183,7 +178,7 @@ bool Aircraft::_isAircraftNearTheMothership() {
 }
 
 
-float Aircraft::_deltaSpeed(float acceleration, float dt, float targetSpeed) {
+float Aircraft::_getDeltaSpeed(float acceleration, float dt, float targetSpeed) {
 	if (abs(targetSpeed - _speed) < dt * acceleration) {
 		return targetSpeed - _speed;
 	}
@@ -204,11 +199,12 @@ bool Aircraft::_isOnCourse() {
 
 
 float Aircraft::_getRelativePatrolAngle(float patrolRadius, bool* isSuccess) {
-	*isSuccess = false;
 	Vector2 pathToTarget = _target - _position;
 	float pathLength = sqrt(pathToTarget.lengthSquare());
 	if (pathLength <= patrolRadius) {
-		*isSuccess = false;
+		if (isSuccess != NULL) {
+			*isSuccess = false;
+		}
 		return false;
 	}
 	else {
@@ -216,10 +212,11 @@ float Aircraft::_getRelativePatrolAngle(float patrolRadius, bool* isSuccess) {
 		float targetAngle = atan2(pathToTarget.y, pathToTarget.x);
 		float patrolAngle = targetAngle - radiusAngle;
 		float pi = params::precision::PI_CONST;
-		//We add 2PI for guarantee angle positivness;
-		//We add PI in fmod and substract PI outside fmod for making result in [-PI, PI];
-		float relativePatrolAngle = fmod((patrolAngle - _angle + (pi)+2 * (pi)), (pi * 2)) - pi;
-		*isSuccess = true;
+		float relativePatrolAngle = _getVectorsAngleDistance(patrolAngle, _angle);
+		//float relativePatrolAngle = fmod((patrolAngle - _angle + (pi)+2 * (pi)), (pi * 2)) - pi;
+		if (isSuccess != NULL) {
+			*isSuccess = true;
+		}
 		return relativePatrolAngle;
 	}
 }
@@ -229,8 +226,17 @@ bool Aircraft::_isBrakeTime(float targetSpeed, float acceleration, Vector2 targe
 		return false;
 	}
 	float timeToBrake = (_speed - targetSpeed) / acceleration;
-	float brakingDistance = targetSpeed * timeToBrake + acceleration * pow(timeToBrake,2)* 0.5;
+	float brakingDistance = targetSpeed * timeToBrake + acceleration * pow(timeToBrake,2)* 0.5f;
 	return sqrt((targetPosition - _position).lengthSquare()) - params::aircraft::PATROL_RADIUS < brakingDistance;
+}
+
+float Aircraft::_getAcceleration(Vector2 target, float targetSpeed, float dt) {
+	if (_isBrakeTime(targetSpeed, params::aircraft::LINEAR_ACCELERATION, target)) {
+		return _getAcceleration(targetSpeed, dt);
+	}
+	else {
+		return _getAcceleration(params::aircraft::LINEAR_SPEED, dt);
+	}
 }
 
 float Aircraft::_getAcceleration(float targetSpeed, float dt) {
@@ -239,4 +245,35 @@ float Aircraft::_getAcceleration(float targetSpeed, float dt) {
 		return sign(oneTickAcceleration) * params::aircraft::LINEAR_ACCELERATION;
 	}
 	return oneTickAcceleration;
+}
+
+
+float Aircraft::_getLayInACourseDeltaAngle(float dt) {
+	bool isSuccess;
+	float relativePatrolAngle = _getRelativePatrolAngle(params::aircraft::PATROL_RADIUS, &isSuccess);
+	if (abs(relativePatrolAngle) <= params::aircraft::ANGULAR_SPEED * dt) {
+		return relativePatrolAngle;
+	}
+	else {
+		return sign(relativePatrolAngle) * (params::aircraft::ANGULAR_SPEED * dt);
+	}
+}
+
+float Aircraft::_getVectorsAngleDistance(float first, float second) {
+	float pi = params::precision::PI_CONST;
+
+	//We add PI before fmod and substract PI after fmod for making result in [-PI, PI];
+	float difference = first - second + (pi);
+	if (difference < 0) {
+		difference = fmod(difference, 2 * pi);
+		//We add 2PI for guarantee angle positivness;
+		difference += 2 * pi;
+	}
+	else {
+		difference = fmod(difference, 2 * pi);
+	}
+	difference -= pi;
+	return difference;
+
+	
 }

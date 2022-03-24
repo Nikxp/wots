@@ -33,6 +33,7 @@ public:
 	void setTarget(Vector2 target);
 private:
 
+	void changeInternalState(float acceleration, float deltaAngle, float dt);
 	bool _isTakeOffFinished();
 
 	bool _isReturningTime();
@@ -41,12 +42,16 @@ private:
 	float _timeForLanding();
 
 	bool _isAircraftNearTheMothership();
-	void _setReturnModeIfNeed();
-	float _deltaSpeed(float acceleration, float dt, float targetSpeed);
+	float _getDeltaSpeed(float acceleration, float dt, float targetSpeed);
 	bool _isOnCourse();
 	float _getRelativePatrolAngle(float patrolRadius, bool* status);
 	bool _isBrakeTime(float targetSpeed, float acceleration, Vector2 targetPosition);
+	float _getAcceleration(Vector2 target, float targetSpeed, float dt);
 	float _getAcceleration(float targetSpeed, float dt);
+	float _getLayInACourseDeltaAngle(float dt);
+	
+	//return value is [-pi; pi]
+	float _getVectorsAngleDistance(float first, float second);
 
 	
 	scene::Mesh* _mesh;
@@ -62,6 +67,6 @@ private:
 	AircraftStatus _status;
 
 	//Distance from Ship center
-	float _relativePosition;
+	float _distanceToShip;
 
 };

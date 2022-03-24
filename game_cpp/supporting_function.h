@@ -10,10 +10,10 @@ namespace params
 {
 	namespace precision
 	{
-		constexpr float ZERO_COMPARISON = 1e-6;
+		constexpr float ZERO_COMPARISON = 1.e-6f;
 		constexpr float PI_CONST = 3.141593f;
-		constexpr float PATROL_RADIUS_VARIATION = 1e-4;
-		constexpr float ON_COURSE_ANGLE_VARIATION = 1e-4;
+		constexpr float PATROL_RADIUS_VARIATION = 1.e-4f;
+		constexpr float ON_COURSE_ANGLE_VARIATION = 1.e-4f;
 	}
 	namespace ship
 	{
@@ -30,9 +30,10 @@ namespace params
 		constexpr float ANGULAR_SPEED = 2.5f;
 		constexpr float LINEAR_ACCELERATION = 0.7f;
 		constexpr float TAKEOFF_RADIUS = 0.4f;
-		constexpr float MAXIMAL_FLIGHT_TIME = 20.f;
+		constexpr float MAXIMAL_FLIGHT_TIME = 30.f;
 		constexpr float PATROL_RADIUS = 0.7f;
 		constexpr float PATROL_SPEED_COEFFICIENT = 0.6f;
+		constexpr float TAKEOFF_SPEED_COEFICIENT = 0.25f;
 
 		// Relativly to ship LINEAR_SPEED;
 		constexpr float LANDING_SPEED_COEFFICIENT = 1.5f;
