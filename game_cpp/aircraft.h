@@ -10,8 +10,6 @@ enum AircraftStatus {
 	ReadyToFlight,
 	TakeOff,
 	LayInACourse,
-	FlyForward,
-	Patroling,
 	Returning,
 	Fuelling,
 	Count
@@ -36,14 +34,18 @@ public:
 private:
 
 	bool _isTakeOffFinished();
-	TurnDecision _getTurnDecision(float patrolRadius);
+
 	bool _isReturningTime();
+	float _timeForMakingCircle();
+	float _timeForReturning();
+	float _timeForLanding();
+
 	bool _isAircraftNearTheMothership();
 	void _setReturnModeIfNeed();
 	float _deltaSpeed(float acceleration, float dt, float targetSpeed);
 	bool _isOnCourse();
 	float _getRelativePatrolAngle(float patrolRadius, bool* status);
-	bool _isBrakeTime(float targetSpeed, float acceleration);
+	bool _isBrakeTime(float targetSpeed, float acceleration, Vector2 targetPosition);
 	float _getAcceleration(float targetSpeed, float dt);
 
 	

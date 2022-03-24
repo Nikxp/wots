@@ -30,9 +30,12 @@ namespace params
 		constexpr float ANGULAR_SPEED = 2.5f;
 		constexpr float LINEAR_ACCELERATION = 0.7f;
 		constexpr float TAKEOFF_RADIUS = 0.4f;
-		constexpr float MAXIMAL_FLIGHT_TIME = 7.f;
+		constexpr float MAXIMAL_FLIGHT_TIME = 20.f;
 		constexpr float PATROL_RADIUS = 0.7f;
 		constexpr float PATROL_SPEED_COEFFICIENT = 0.6f;
+
+		// Relativly to ship LINEAR_SPEED;
+		constexpr float LANDING_SPEED_COEFFICIENT = 1.5f;
 	}
 }
 

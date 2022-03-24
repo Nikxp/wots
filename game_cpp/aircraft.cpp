@@ -3,9 +3,6 @@
 #include <cassert>
 #include <cmath>
 
-//Delete me
-#include <iostream>
-
 Aircraft::Aircraft(Ship& mothership) :
 	_mesh(nullptr),
 	_mothership(mothership),
@@ -45,9 +42,6 @@ bool Aircraft::Takeoff()
 }
 
 void Aircraft::update(float dt) {
-	// Placeholder::
-	// Set speed more complex
-	// Refactor code
 	_flightTime += dt;
 	float patrolRadius = 0.7f;
 	switch (_status) {
@@ -70,41 +64,11 @@ void Aircraft::update(float dt) {
 		break;
 	}
 	case LayInACourse: {
-
-//		std::cout << "Lay On Course" << std::endl;
-//		TurnDecision turnDecision = _getTurnDecision(0.7f);
-//		switch (turnDecision) {
-//			case OnPatrolCircle: {
-//				_status = Patroling;
-//				break;
-//			}
-//			case OnCourse: {
-//				_status = FlyForward;
-//				break;
-//			}
-//			case ToCenter: {
-//				_speed = params::aircraft::LINEAR_SPEED * 0.5;
-//				_angle = _angle + 2 * dt;
-//				_position = _position + _speed * dt * Vector2(std::cos(_angle), std::sin(_angle));
-//				break;
-//			}
-//			case FromCenter: {
-//				_speed = params::aircraft::LINEAR_SPEED * 0.5;
-//				_angle = _angle - 2 * dt;
-//				_position = _position + _speed * dt * Vector2(std::cos(_angle), std::sin(_angle));
-//				break;
-//			}
-//		}
-//		scene::placeMesh(_mesh, _position.x, _position.y, _angle);
-//		if (_isReturningTime()) {
-//			_status = Returning;
-//		}
-//		break;
 		bool isSuccess; 
 		float acceleration = 0.f;
 		if (_isOnCourse()) {
 			float patrolSpeed = params::aircraft::LINEAR_SPEED * params::aircraft::PATROL_SPEED_COEFFICIENT;
-			if (_isBrakeTime(patrolSpeed, params::aircraft::LINEAR_ACCELERATION)) {
+			if (_isBrakeTime(patrolSpeed, params::aircraft::LINEAR_ACCELERATION, _target)) {
 				acceleration = _getAcceleration(patrolSpeed,dt);
 			}
 			else {
@@ -121,10 +85,6 @@ void Aircraft::update(float dt) {
 		}
 		_angle = fmod(_angle, 2 * params::precision::PI_CONST);
 
-		if (abs(_angle) > params::precision::PI_CONST * 2) {
-			std::cout << "WARNING!";
-		}
-		
 		_position = _position + (_speed * dt + acceleration*pow(dt,2)) * Vector2(std::cos(_angle), std::sin(_angle));
 		_speed = _speed + acceleration * dt;
 		scene::placeMesh(_mesh, _position.x, _position.y, _angle);
@@ -135,67 +95,30 @@ void Aircraft::update(float dt) {
 		}
 		break; 
 	}
-	case FlyForward: {
-		std::cout << "Fly forward" << std::endl;
-		_speed = params::aircraft::LINEAR_SPEED;
-		_angle = _angle;
-		_position = _position + _speed * dt * Vector2(std::cos(_angle), std::sin(_angle));
-		scene::placeMesh(_mesh, _position.x, _position.y, _angle);
-		if (_isReturningTime()) {
-			_status = Returning;
-			break;
-		}
-	
-		Vector2 pathToTarget = _target - _position;
-		float pathLength = sqrt(pathToTarget.lengthSquare());
-	
-		if (pathLength <= patrolRadius + params::precision::PATROL_RADIUS_VARIATION) {
-			_status = Patroling;
-		}
-		break;
-	}
-	case Patroling: {
-		std::cout << "Patroling" << std::endl;
-				TurnDecision turnDecision = _getTurnDecision(0.7f);
-				switch (turnDecision) {
-					case OnPatrolCircle: {
-						//_status = Patroling;
-						break;
-					}
-					case OnCourse: {
-						//_status = FlyForward;
-						break;
-					}
-					case ToCenter: {
-						_speed = params::aircraft::LINEAR_SPEED * 0.5;
-						_angle = _angle + 2 * dt;
-						_position = _position + _speed * dt * Vector2(std::cos(_angle), std::sin(_angle));
-						break;
-					}
-					case FromCenter: {
-						_speed = params::aircraft::LINEAR_SPEED * 0.5;
-						_angle = _angle - 2 * dt;
-						_position = _position + _speed * dt * Vector2(std::cos(_angle), std::sin(_angle));
-						break;
-					}
-				}
-				scene::placeMesh(_mesh, _position.x, _position.y, _angle);
-				if (_isReturningTime()) {
-					_status = Returning;
-				}
-				break;
-	}
 	case Returning: {
 		Vector2 vectorToMothership = _mothership.getPosition() - _position;
 		Vector2 angleVector(cos(_angle), sin(_angle));
-		_speed = params::aircraft::LINEAR_SPEED * 0.5;
+		float acceleration = 0;
+		
+		float returnSpeed = params::ship::LINEAR_SPEED * params::aircraft::LANDING_SPEED_COEFFICIENT;
+		if (returnSpeed > params::aircraft::LINEAR_SPEED) {
+			returnSpeed = params::aircraft::LINEAR_SPEED;
+		}
+		if (_isBrakeTime(returnSpeed, params::aircraft::LINEAR_ACCELERATION, _mothership.getPosition())) {
+			acceleration = _getAcceleration(returnSpeed, dt);
+		}
+		else {
+			acceleration = _getAcceleration(params::aircraft::LINEAR_SPEED, dt);
+		}
+
 		if (isVectorsClockviseOrder(vectorToMothership, angleVector)) {
 			_angle = _angle - 2 * dt;
 		}
 		else {
 			_angle = _angle + 2 * dt;
 		}
-		_position = _position + _speed * dt * Vector2(std::cos(_angle), std::sin(_angle));
+		_position = _position + (_speed * dt + acceleration*pow(dt,2)* 0.5) * Vector2(std::cos(_angle), std::sin(_angle));
+		_speed += acceleration * dt;
 		scene::placeMesh(_mesh, _position.x, _position.y, _angle);
 		if (_isAircraftNearTheMothership()) {
 			_status = Fuelling;
@@ -230,57 +153,27 @@ bool Aircraft::_isTakeOffFinished() {
 	return params::aircraft::TAKEOFF_RADIUS < _relativePosition;
 }
 
-// We are finding crossing point patrol circle and plane course
-// If we have only one crossing point with positive time param - we are on course
-// position + speed * time *Vector(cos(angle), sin (angle)) is on patrol circle
-TurnDecision Aircraft::_getTurnDecision(float patrolRadius) {
-	Vector2 positionRelativeToTarget = _position - _target;
-	
-	//We have quadric equation by time.
-	float quadraticCoefficient = 1.f;
-	float linearCoefficient = 2 *((positionRelativeToTarget.x) * cos(_angle) + (positionRelativeToTarget.y) *sin(_angle));
-	float constatntCoefficient = positionRelativeToTarget.x * positionRelativeToTarget.x + positionRelativeToTarget.y * positionRelativeToTarget.y - patrolRadius* patrolRadius;
-	
-	if (quadraticCoefficient < params::precision::ZERO_COMPARISON) {
-		quadraticCoefficient = -quadraticCoefficient;
-		linearCoefficient = -linearCoefficient;
-		constatntCoefficient = -constatntCoefficient;
-	}
-
-	float discriminant = linearCoefficient * linearCoefficient - 4 * quadraticCoefficient * constatntCoefficient;
-	if (abs(discriminant) < params::precision::ZERO_COMPARISON) {
-		float answer = -linearCoefficient * 0.5 * quadraticCoefficient;
-		if (abs(answer) <= -params::precision::ZERO_COMPARISON) {
-			return TurnDecision::OnPatrolCircle;
-		} else if (answer >= -params::precision::ZERO_COMPARISON) {
-				return TurnDecision::OnCourse;
-		} else {
-			return TurnDecision::FromCenter;
-		}
-
-	} else if (discriminant < 0.f) {
-		return TurnDecision::ToCenter;
-
-	} else {
-		float biggerAnswer = (-linearCoefficient + sqrt(discriminant)) * 0.5 / quadraticCoefficient;
-		if (biggerAnswer >= params::precision::ZERO_COMPARISON) {
-			return TurnDecision::FromCenter;
-		}
-		else {
-			return TurnDecision::ToCenter;
-		}
-	}
-}
-
 bool Aircraft::_isReturningTime() {
-	//Placeholder
-	// Check if time calculated correctly (acceleration)
 	assert(params::aircraft::LINEAR_SPEED > params::ship::LINEAR_SPEED);
-	float timeForReturning = 0.f;
-	timeForReturning += sqrt((_mothership.getPosition() - _position).lengthSquare()) / (params::aircraft::LINEAR_SPEED - params::ship::LINEAR_SPEED);
-	timeForReturning += 2 * params::precision::PI_CONST / params::aircraft::ANGULAR_SPEED;
+	float timeForReturning = _timeForMakingCircle() + _timeForReturning() + _timeForLanding();
 	return _flightTime + timeForReturning  > params::aircraft::MAXIMAL_FLIGHT_TIME;
 }
+
+
+float Aircraft::_timeForMakingCircle() {
+	return 2 * params::precision::PI_CONST / params::aircraft::ANGULAR_SPEED;
+}
+
+float Aircraft::_timeForReturning() {
+	return sqrt((_mothership.getPosition() - _position).lengthSquare()) / (params::aircraft::LINEAR_SPEED - params::ship::LINEAR_SPEED);
+}
+
+float Aircraft::_timeForLanding() {
+	float timeForBraking = (params::aircraft::LINEAR_SPEED - params::aircraft::LANDING_SPEED_COEFFICIENT * params::ship::LINEAR_SPEED) / params::aircraft::LINEAR_ACCELERATION;
+	float timeForChase = timeForBraking / (params::aircraft::LANDING_SPEED_COEFFICIENT - 1);
+	return timeForBraking + timeForChase;
+}
+
 
 bool Aircraft::_isAircraftNearTheMothership() {
 	if ((_mothership.getPosition() - _position).lengthSquare() <= std::pow(params::ship::LANDING_RADIUS, 2)) {
@@ -327,21 +220,17 @@ float Aircraft::_getRelativePatrolAngle(float patrolRadius, bool* isSuccess) {
 		//We add PI in fmod and substract PI outside fmod for making result in [-PI, PI];
 		float relativePatrolAngle = fmod((patrolAngle - _angle + (pi)+2 * (pi)), (pi * 2)) - pi;
 		*isSuccess = true;
-		//placeholder
-		if (relativePatrolAngle < 0) {
-			std::cout << "WARNING!";
-		}
 		return relativePatrolAngle;
 	}
 }
 
-bool Aircraft::_isBrakeTime(float targetSpeed, float acceleration) {
+bool Aircraft::_isBrakeTime(float targetSpeed, float acceleration, Vector2 targetPosition) {
 	if (targetSpeed >= _speed) {
 		return false;
 	}
 	float timeToBrake = (_speed - targetSpeed) / acceleration;
 	float brakingDistance = targetSpeed * timeToBrake + acceleration * pow(timeToBrake,2)* 0.5;
-	return sqrt((_target - _position).lengthSquare()) - params::aircraft::PATROL_RADIUS < brakingDistance;
+	return sqrt((targetPosition - _position).lengthSquare()) - params::aircraft::PATROL_RADIUS < brakingDistance;
 }
 
 float Aircraft::_getAcceleration(float targetSpeed, float dt) {
